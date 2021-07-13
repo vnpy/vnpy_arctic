@@ -154,7 +154,8 @@ class ArcticMongoDatabase(BaseDatabase):
         bar_symbol = symbol + "-" + exchange.value + "-" + interval.value + "-" + "bar"
         if bar_symbol in self.library.list_symbols():
             bars: List[BarData] = []
-            b = self.library.read(bar_symbol, chunk_range=pd.date_range(start, end))
+            frequence = "T"
+            b = self.library.read(bar_symbol, chunk_range=pd.date_range(start, end, freq=frequence))
             f = b.to_dict(orient='index')
             for d in f.values():
                 bar_datetime = d["date"].value // 1000000000
