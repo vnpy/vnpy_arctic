@@ -286,6 +286,3 @@ class ArcticMongoDatabase(BaseDatabase):
             overviews.append(bar_overview)
         # the first item is symbol default which should be removed
         return overviews[1:]
-
-
-database_manager = ArcticMongoDatabase()
