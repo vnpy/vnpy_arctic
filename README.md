@@ -9,20 +9,15 @@ vn.py框架的Arctic数据库管理器
     <img src ="https://img.shields.io/badge/version-1.0.0-blueviolet.svg"/>
     <img src ="https://img.shields.io/badge/platform-linux|windows|mac-yellow.svg"/>
     <img src ="https://img.shields.io/badge/python-3.7-blue.svg" />
-    <img src ="https://img.shields.io/github/license/vnpy/vnpy.svg?color=orange"/>
 </p>
 
 ## 说明
 
-为vn.py提供了arctic的使用支持
+arctic数据库接口，为了正常运行，运行python版本需要低于3.9，运行pandas版本需要低于1.0.3。
 
 ## 安装
 
 安装需要基于2.4.0版本以上的[VN Studio](https://www.vnpy.com)。
-
-运行python版本需要低于3.9
-
-运行pandas版本需要低于1.0.3
 
 下载解压后在cmd运行：
 
