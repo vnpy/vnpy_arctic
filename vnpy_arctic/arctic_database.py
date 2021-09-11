@@ -13,6 +13,7 @@ from vnpy.trader.database import (
     DB_TZ,
     convert_tz
 )
+from vnpy.trader.setting import SETTINGS
 
 
 class ArcticMongoDatabase(BaseDatabase):
@@ -21,7 +22,7 @@ class ArcticMongoDatabase(BaseDatabase):
     def __init__(self) -> None:
         """"""
         # 连接接口
-        store = Arctic("localhost")
+        store = Arctic(SETTINGS["database.host"])
         # 当数据库不存在时创建数据库
         store.initialize_library("vnpy.vnpy", lib_type=CHUNK_STORE)
         # 获取数据库
@@ -240,7 +241,7 @@ class ArcticMongoDatabase(BaseDatabase):
                 tick.ask_volume_5 = ask_volume_5
 
                 tick.localtime = localtime
-                
+
                 ticks.append(tick)
             return ticks
         else:

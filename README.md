@@ -48,3 +48,19 @@ Sqlite
 获取一条overview平均消耗时间：0.0025047659873962402s
 
 平均删除消耗时间：0.07287977933883667s
+
+## 配置
+
+arctic在VN Trader中配置时，需填写以下字段信息：
+
+| 字段名             | 值 |
+|---------           |---- |
+|database.driver     | arctic |
+|database.host       | 地址 |
+ 
+SQLite的例子如下所示：
+
+| 字段名            | 值 |
+|---------           |---- |
+|database.driver     | arctic |
+|database.database   | localhost |
