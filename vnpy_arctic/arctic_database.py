@@ -75,6 +75,8 @@ class ArcticMongoDatabase(BaseDatabase):
         df = pd.DataFrame([{"exchange": exchange, "symbol": symbol, "interval": interval, "date": start_time, "start": start_time, "end": end_time, "count": count}])
         self.library.update(overview_symbol, df, upsert=True)
 
+        return True
+
     def save_tick_data(self, ticks: List[TickData]) -> bool:
         """保存TICK数据"""
         tick = ticks[0]
@@ -133,7 +135,7 @@ class ArcticMongoDatabase(BaseDatabase):
             test_dict["ask_volume_4"].append(tick.ask_volume_4)
             test_dict["ask_volume_5"].append(tick.ask_volume_5)
 
-            test_dict["localtime"].append(convert_tz(tick.localtime))
+            test_dict["localtime"].append(tick.localtime)
         data_frame = pd.DataFrame(test_dict)
 
         # 使用update操作将数据更新到数据库中
@@ -192,7 +194,7 @@ class ArcticMongoDatabase(BaseDatabase):
                 bid_volume_1, bid_volume_2, bid_volume_3, bid_volume_4, bid_volume_5,\
                 ask_volume_1, ask_volume_2, ask_volume_3, ask_volume_4, ask_volume_5, localtime\
                 in zip(df["symbol"], df["exchange"], df["date"], df["name"], df["volume"], df["turnover"],
-                       df["last_price"], df["last_volume"], df["limit_up"], df["limit_down"],
+                       df["open_interest"], df["last_price"], df["last_volume"], df["limit_up"], df["limit_down"],
                        df["open_price"], df["high_price"], df["low_price"], df["pre_close"],
                        df["bid_price_1"], df["bid_price_2"], df["bid_price_3"], df["bid_price_4"], df["bid_price_5"],
                        df["ask_price_1"], df["ask_price_2"], df["ask_price_3"], df["ask_price_4"], df["ask_price_5"],
