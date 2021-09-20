@@ -234,17 +234,22 @@ class ArcticDatabase(BaseDatabase):
         interval: Interval
     ) -> int:
         """删除K线数据"""
-        bar_symbol = symbol + "-" + exchange.value + "-" + interval.value + "-" + "bar"
-        overview_symbol = symbol + "-" + exchange.value + "-" + interval.value + "-" + "overview"
-        if bar_symbol in self.bar_library.list_symbols():
-            info = self.bar_library.get_info(bar_symbol)
-            self.bar_library.delete(bar_symbol)
-        else:
-            return "bar data does not exit, please save data first."
+        # 生成表名
+        table_name = generate_table_name(symbol, exchange, interval)
+    
+        # 查询总数据量
+        info = self.bar_library.get_info(table_name)
+        count = info["len"]
+    
+        # 删除数据
+        self.bar_library.delete(table_name)
+
         # 删除K线汇总数据
+        overview_symbol = symbol + "-" + exchange.value + "-" + interval.value + "-" + "overview"
         if overview_symbol in self.bar_library.list_symbols():
             self.bar_library.delete(overview_symbol)
-        return info["len"]
+
+        return count
 
     def delete_tick_data(
         self,
@@ -252,13 +257,17 @@ class ArcticDatabase(BaseDatabase):
         exchange: Exchange
     ) -> int:
         """删除Tick数据"""
-        tick_symbol = symbol + "-" + exchange.value + "-" + "tick"
-        if tick_symbol in self.tick_library.list_symbols():
-            info = self.tick_library.get_info(tick_symbol)
-            self.tick_library.delete(tick_symbol)
-        else:
-            return "tick data does not exit, please save data first."
-        return info["len"]
+        # 生成表名
+        table_name = generate_table_name(symbol, exchange)
+    
+        # 查询总数据量
+        info = self.tick_library.get_info(table_name)
+        count = info["len"]
+    
+        # 删除数据
+        self.tick_library.delete(table_name)
+
+        return count
 
     def get_bar_overview(self) -> List[BarOverview]:
         """"查询数据库中的K线汇总信息"""
