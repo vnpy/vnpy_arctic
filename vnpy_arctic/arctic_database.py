@@ -149,7 +149,7 @@ class ArcticDatabase(BaseDatabase):
         table_name = generate_table_name(symbol, tick.exchange)
 
         # 将数据更新到数据库中
-        self.tick_library.update(table_name, df, upsert=True)
+        self.tick_library.update(table_name, df, upsert=True, chunk_size="M")
 
     def load_bar_data(
         self,
