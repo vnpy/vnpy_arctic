@@ -67,7 +67,7 @@ class ArcticDatabase(BaseDatabase):
         table_name = generate_table_name(symbol, bar.exchange, bar.interval)
 
         # 将数据更新到数据库中
-        self.bar_library.update(table_name, df, upsert=True)
+        self.bar_library.update(table_name, df, upsert=True, chunk_size="M")
 
         # 更新K线汇总数据
         info: dict = self.bar_library.get_info(table_name)
