@@ -23,7 +23,7 @@
 
 import importlib_metadata
 
-from .arctic_database import ArcticMongoDatabase as Database
+from .arctic_database import ArcticDatabase as Database
 
 
 try:

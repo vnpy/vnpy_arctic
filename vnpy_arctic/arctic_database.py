@@ -1,9 +1,8 @@
-""""""
 from datetime import datetime
-from typing import List
-import pandas as pd
+from typing import Any, List
 
-from arctic import CHUNK_STORE, Arctic
+import pandas as pd
+from arctic import Arctic, CHUNK_STORE
 
 from vnpy.trader.constant import Exchange, Interval
 from vnpy.trader.object import BarData, TickData
@@ -16,17 +15,19 @@ from vnpy.trader.database import (
 from vnpy.trader.setting import SETTINGS
 
 
-class ArcticMongoDatabase(BaseDatabase):
+class ArcticDatabase(BaseDatabase):
     """基于Arctic的MongoDB数据库接口"""
 
     def __init__(self) -> None:
         """"""
-        # 连接接口
-        store = Arctic(SETTINGS["database.host"])
-        # 当数据库不存在时创建数据库
-        store.initialize_library("vnpy.vnpy", lib_type=CHUNK_STORE)
+        # 初始化连接
+        self.connection: Arctic = Arctic(SETTINGS["database.host"])
+
+        # 初始化实例
+        self.connection.initialize_library("vnpy", CHUNK_STORE)
+
         # 获取数据库
-        self.library = store["vnpy.vnpy"]
+        self.library: Any = self.connection["vnpy"]
 
     def save_bar_data(self, bars: List[BarData]) -> bool:
         """保存K线数据"""
@@ -36,32 +37,28 @@ class ArcticMongoDatabase(BaseDatabase):
         exchange = bar.exchange.value
         interval = bar.interval.value
 
-        key = [i for i in bar.__dict__]
+        # 转换数据为DataFrame
+        data: List[dict] = []
 
-        key.remove("gateway_name")
-        key.remove("vt_symbol")
-        key.remove("datetime")
-        key.append("date")
-
-        # 将BarData转化为DafaFrame，并调整时区，存入数据库
-        test_dict = {i: [] for i in key}
         for bar in bars:
-            test_dict["symbol"].append(bar.symbol)
-            test_dict["exchange"].append(bar.exchange.value)
-            test_dict["date"].append(convert_tz(bar.datetime))
-            test_dict["interval"].append(bar.interval.value)
-            test_dict["volume"].append(bar.volume)
-            test_dict["turnover"].append(bar.turnover)
-            test_dict["open_interest"].append(bar.open_interest)
-            test_dict["open_price"].append(bar.open_price)
-            test_dict["high_price"].append(bar.high_price)
-            test_dict["low_price"].append(bar.low_price)
-            test_dict["close_price"].append(bar.close_price)
-        data_frame = pd.DataFrame(test_dict)
+            d = {
+                "date": convert_tz(bar.datetime),
+                "open_price": bar.open_price,
+                "high_price": bar.high_price,
+                "low_price": bar.low_price,
+                "close_price": bar.close_price,
+                "volume": bar.volume,
+                "turnover": bar.turnover,
+                "open_interest": bar.open_interest,
+            }
+
+            data.append(d)
+
+        df: pd.DataFrame = pd.DataFrame.from_records(data)
 
         # 使用update操作将数据更新到数据库中
-        bar_symbol = symbol + "-" + exchange + "-" + interval + "-" + "bar"
-        self.library.update(bar_symbol, data_frame, upsert=True)
+        table_name = bar_table_name(symbol, exchange, interval)
+        self.library.update(table_name, df, upsert=True)
 
         # 更新K线汇总数据
         overview_symbol = symbol + "-" + exchange + "-" + interval + "-" + "overview"
@@ -152,26 +149,34 @@ class ArcticMongoDatabase(BaseDatabase):
     ) -> List[BarData]:
         """读取K线数据"""
         bar_symbol = symbol + "-" + exchange.value + "-" + interval.value + "-" + "bar"
+
         if bar_symbol in self.library.list_symbols():
-            bars: List[BarData] = []
-            df = self.library.read(bar_symbol, chunk_range=pd.date_range(start, end))
-            for date, symbol, exchange_d, interval, volume, turnover, open_interest, open_price, high_price, low_price, close_price\
-                in zip(df["date"], df["symbol"], df["exchange"], df["interval"], df["volume"], df["turnover"],
-                       df["open_interest"], df["open_price"], df["high_price"], df["low_price"], df["close_price"]):
-                bar_datetime = datetime.fromtimestamp(date.timestamp(), DB_TZ)
-                bar = BarData("DB", symbol, exchange, bar_datetime)
-                bar.volume = volume
-                bar.turnover = turnover
-                bar.interval = Interval(interval)
-                bar.open_interest = open_interest
-                bar.open_price = open_price
-                bar.high_price = high_price
-                bar.low_price = low_price
-                bar.close_price = close_price
-                bars.append(bar)
-            return bars
-        else:
-            return "bar data does not exit, please save data first."
+            return []
+
+        df = self.library.read(bar_symbol, chunk_range=pd.date_range(start, end))
+            
+        bars: List[BarData] = []
+
+        for tp in df.itertuples():
+            dt = datetime.fromtimestamp(tp.date.timestamp(), DB_TZ)
+
+            bar = BarData(
+                symbol=symbol,
+                exchange=exchange,
+                datetime=dt,
+                interval=interval,
+                volume=tp.volume,
+                turnover=tp.turnover,
+                open_interest=tp.open_interest,
+                open_price=tp.open_price,
+                high_price=tp.high_price,
+                low_price=tp.low_price,
+                close_price=tp.close_price,
+                gateway_name="DB"
+            )
+            bars.append(bar)
+
+        return bars
 
     def load_tick_data(
         self,
@@ -300,3 +305,8 @@ class ArcticMongoDatabase(BaseDatabase):
             bar_overview.count = i["count"].values[0]
             overviews.append(bar_overview)
         return overviews[1:]
+
+
+def bar_table_name(symbol: str, exchange: Exchange, interval: Interval) -> str:
+    """生成K线表名"""
+    return f"{symbol}_{exchange.value}_{interval.value}"
