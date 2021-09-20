@@ -84,11 +84,16 @@ class ArcticDatabase(BaseDatabase):
                 "end": bars[-1].datetime,
                 "count": count
             }
-            self.overview_library.append(table_name, metadata)
         else:
             metadata["start"] = min(metadata["start"], bars[0].datetime)
             metadata["end"] = max(metadata["end"], bars[-1].datetime)
             metadata["count"] = count
+
+        self.overview_library.append(
+            table_name,
+            metadata,
+            start_time=datetime.now(DB_TZ)
+        )
 
         return True
 
