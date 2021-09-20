@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import Any, List
-from arctic.chunkstore.chunkstore import ChunkStore
 
 import pandas as pd
-from arctic import Arctic, CHUNK_STORE
+from arctic.arctic import Arctic, CHUNK_STORE, METADATA_STORE
 from arctic.date import DateRange
+from arctic.chunkstore.chunkstore import ChunkStore
+from arctic.store.metadata_store import MetadataStore
 
 from vnpy.trader.constant import Exchange, Interval
 from vnpy.trader.object import BarData, TickData
@@ -28,10 +29,12 @@ class ArcticDatabase(BaseDatabase):
         # 初始化实例
         self.connection.initialize_library("bar_data", CHUNK_STORE)
         self.connection.initialize_library("tick_data", CHUNK_STORE)
+        self.connection.initialize_library("data_overview", METADATA_STORE)
 
         # 获取数据库
         self.bar_library: ChunkStore = self.connection["bar_data"]
         self.tick_library: ChunkStore = self.connection["tick_data"]
+        self.overview_library: MetadataStore = self.connection["data_overview"]
 
     def save_bar_data(self, bars: List[BarData]) -> bool:
         """保存K线数据"""
@@ -65,16 +68,25 @@ class ArcticDatabase(BaseDatabase):
         self.bar_library.update(table_name, df, upsert=True)
 
         # 更新K线汇总数据
-        overview_symbol = symbol + "-" + exchange + "-" + interval + "-" + "overview"
-        ccc = [i for i in self.bar_library.iterator(bar_symbol)]
-        count = 0
-        for i in ccc:
-            count += len(i)
-        start_time = ccc[0].iloc[0]["date"]
-        end_time = ccc[-1].iloc[-1]["date"]
+        info: dict = self.bar_library.get_info(table_name)
+        count: int = info["len"]
 
-        df = pd.DataFrame([{"exchange": exchange, "symbol": symbol, "interval": interval, "date": start_time, "start": start_time, "end": end_time, "count": count}])
-        self.bar_library.update(overview_symbol, df, upsert=True)
+        metadata: dict = self.overview_library.read(table_name)
+
+        if not metadata:
+            metadata = {
+                "symbol": symbol,
+                "exchange": exchange.value,
+                "interval": interval.value,
+                "start": bars[0].datetime,
+                "end": bars[-1].datetime,
+                "count": count
+            }
+            self.overview_library.append(table_name, metadata)
+        else:
+            metadata["start"] = min(metadata["start"], bars[0].datetime)
+            metadata["end"] = max(metadata["end"], bars[-1].datetime)
+            metadata["count"] = count
 
         return True
 
@@ -245,9 +257,7 @@ class ArcticDatabase(BaseDatabase):
         self.bar_library.delete(table_name)
 
         # 删除K线汇总数据
-        overview_symbol = symbol + "-" + exchange.value + "-" + interval.value + "-" + "overview"
-        if overview_symbol in self.bar_library.list_symbols():
-            self.bar_library.delete(overview_symbol)
+        self.overview_library.purge(table_name)
 
         return count
 
@@ -271,22 +281,24 @@ class ArcticDatabase(BaseDatabase):
 
     def get_bar_overview(self) -> List[BarOverview]:
         """"查询数据库中的K线汇总信息"""
-        symbols = self.bar_library.list_symbols()
         overviews = []
-        for symbol in symbols:
-            if symbol.split("-")[-1] == "overview":
-                overviews.append(symbol)
-        dataframe_overview = [self.bar_library.read(overview) for overview in overviews]
-        for i in dataframe_overview:
-            bar_overview = BarOverview()
-            bar_overview.exchange = Exchange(i["exchange"].values[0])
-            bar_overview.symbol = i["symbol"].values[0]
-            bar_overview.interval = Interval(i["interval"].values[0])
-            bar_overview.start = datetime.fromtimestamp(pd.Timestamp(i["start"].values[0]).timestamp(), DB_TZ)
-            bar_overview.end = datetime.fromtimestamp(pd.Timestamp(i["end"].values[0]).timestamp(), DB_TZ)
-            bar_overview.count = i["count"].values[0]
-            overviews.append(bar_overview)
-        return overviews[1:]
+
+        table_names = self.overview_library.list_symbols()
+        for table_name in table_names:
+            metadata = self.overview_library.read(table_name)
+            
+            overview = BarOverview(
+                symbol=metadata["symbol"],
+                exchange=Exchange(metadata["exchange"]),
+                interval=Interval(metadata["interval"]),
+                start=metadata["start"],
+                end=metadata["end"],
+                count=metadata["count"]
+            )
+
+            overviews.append(overview)
+
+        return overviews
 
 
 def generate_table_name(symbol: str, exchange: Exchange, interval: Interval = None) -> str:
