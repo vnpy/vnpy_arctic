@@ -163,15 +163,16 @@ class ArcticDatabase(BaseDatabase):
         table_name = generate_table_name(symbol, exchange, interval)
         df = self.bar_library.read(table_name, chunk_range=DateRange(start, end))
 
+        df.set_index("date", inplace=True)
+        df = df.tz_localize(DB_TZ)
+
         bars: List[BarData] = []
 
         for tp in df.itertuples():
-            dt = datetime.fromtimestamp(tp.date.to_pydatetime().timestamp(), DB_TZ)
-
             bar = BarData(
                 symbol=symbol,
                 exchange=exchange,
-                datetime=dt,
+                datetime=tp.Index.to_pydatetime(),
                 interval=interval,
                 volume=tp.volume,
                 turnover=tp.turnover,
@@ -197,15 +198,16 @@ class ArcticDatabase(BaseDatabase):
         table_name = generate_table_name(symbol, exchange)
         df = self.tick_library.read(table_name, chunk_range=DateRange(start, end))
 
+        df.set_index("date", inplace=True)
+        df = df.tz_localize(DB_TZ)
+
         ticks: List[TickData] = []
 
         for tp in df.itertuples():
-            dt = datetime.fromtimestamp(tp.date.to_pydatetime().timestamp(), DB_TZ)
-
             tick = TickData(
                 symbol=symbol,
                 exchange=exchange,
-                datetime=dt,
+                datetime=tp.Index.to_pydatetime(),
                 name=tp.name,
                 volume=tp.volume,
                 turnover=tp.turnover,
