@@ -67,7 +67,9 @@ class ArcticDatabase(BaseDatabase):
         table_name = generate_table_name(symbol, bar.exchange, bar.interval)
 
         # 将数据更新到数据库中
-        self.bar_library.update(table_name, df, upsert=True, chunk_size="M")
+        self.bar_library.update(
+            table_name, df, upsert=True, chunk_size="M", chunk_range=DateRange(df.date.min(), df.date.max())
+        )
 
         # 更新K线汇总数据
         info: dict = self.bar_library.get_info(table_name)
@@ -149,7 +151,9 @@ class ArcticDatabase(BaseDatabase):
         table_name = generate_table_name(symbol, tick.exchange)
 
         # 将数据更新到数据库中
-        self.tick_library.update(table_name, df, upsert=True, chunk_size="M")
+        self.tick_library.update(
+            table_name, df, upsert=True, chunk_size="M", chunk_range=DateRange(df.date.min(), df.date.max())
+        )
 
     def load_bar_data(
         self,
@@ -161,7 +165,8 @@ class ArcticDatabase(BaseDatabase):
     ) -> List[BarData]:
         """读取K线数据"""
         table_name = generate_table_name(symbol, exchange, interval)
-        df = self.bar_library.read(table_name, chunk_range=DateRange(start, end))
+        df = self.bar_library.read(
+            table_name, chunk_range=DateRange(start, end))
 
         df.set_index("date", inplace=True)
         df = df.tz_localize(DB_TZ)
@@ -196,7 +201,8 @@ class ArcticDatabase(BaseDatabase):
     ) -> List[TickData]:
         """读取Tick数据"""
         table_name = generate_table_name(symbol, exchange)
-        df = self.tick_library.read(table_name, chunk_range=DateRange(start, end))
+        df = self.tick_library.read(
+            table_name, chunk_range=DateRange(start, end))
 
         df.set_index("date", inplace=True)
         df = df.tz_localize(DB_TZ)
