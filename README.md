@@ -22,3 +22,4 @@
 |---------|----|---|---|
 |database.name|名称|是|arctic|
 |database.host|地址|是|localhost|
+|database.port|端口|是|27017|
