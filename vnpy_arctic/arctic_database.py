@@ -23,22 +23,25 @@ class ArcticDatabase(BaseDatabase):
 
     def __init__(self) -> None:
         """"""
+        self.host: str = SETTINGS["database.host"]
+        self.database: str = SETTINGS["database.database"]
+
         # 初始化连接
         self.connection: Arctic = Arctic(
-            SETTINGS["database.host"],
+            self.host,
             tz_aware=True,
             tzinfo=DB_TZ
         )
 
         # 初始化实例
-        self.connection.initialize_library("bar_data", CHUNK_STORE)
-        self.connection.initialize_library("tick_data", CHUNK_STORE)
-        self.connection.initialize_library("data_overview", METADATA_STORE)
+        self.connection.initialize_library(f"{self.database}.bar_data", CHUNK_STORE)
+        self.connection.initialize_library(f"{self.database}.tick_data", CHUNK_STORE)
+        self.connection.initialize_library(f"{self.database}.data_overview", METADATA_STORE)
 
         # 获取数据库
-        self.bar_library: ChunkStore = self.connection["bar_data"]
-        self.tick_library: ChunkStore = self.connection["tick_data"]
-        self.overview_library: MetadataStore = self.connection["data_overview"]
+        self.bar_library: ChunkStore = self.connection[f"{self.database}.bar_data"]
+        self.tick_library: ChunkStore = self.connection[f"{self.database}.tick_data"]
+        self.overview_library: MetadataStore = self.connection[f"{self.database}.data_overview"]
 
     def save_bar_data(self, bars: List[BarData]) -> bool:
         """保存K线数据"""
