@@ -80,18 +80,21 @@ class ArcticDatabase(BaseDatabase):
 
         metadata: dict = self.overview_library.read(table_name)
 
+        start = min(bars[0].datetime, bars[-1].datetime)
+        end = max(bars[0].datetime, bars[-1].datetime)
+
         if not metadata:
             metadata = {
                 "symbol": symbol,
                 "exchange": bar.exchange.value,
                 "interval": bar.interval.value,
-                "start": bars[0].datetime,
-                "end": bars[-1].datetime,
+                "start": start,
+                "end": end,
                 "count": count
             }
         else:
-            metadata["start"] = min(metadata["start"], bars[0].datetime)
-            metadata["end"] = max(metadata["end"], bars[-1].datetime)
+            metadata["start"] = min(metadata["start"], start)
+            metadata["end"] = max(metadata["end"], end)
             metadata["count"] = count
 
         self.overview_library.append(
@@ -209,6 +212,9 @@ class ArcticDatabase(BaseDatabase):
         table_name = generate_table_name(symbol, exchange)
         df = self.tick_library.read(
             table_name, chunk_range=DateRange(start, end))
+
+        if df.empty:
+            return []
 
         df.set_index("date", inplace=True)
         df = df.tz_localize(DB_TZ)
