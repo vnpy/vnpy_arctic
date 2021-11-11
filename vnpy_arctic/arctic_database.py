@@ -210,6 +210,9 @@ class ArcticDatabase(BaseDatabase):
         df = self.tick_library.read(
             table_name, chunk_range=DateRange(start, end))
 
+        if df.empty:
+            return []
+
         df.set_index("date", inplace=True)
         df = df.tz_localize(DB_TZ)
 
