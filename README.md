@@ -23,4 +23,6 @@
 |database.name|名称|是|arctic|
 |database.host|地址|是|localhost|
 |database.port|端口|是|0|
+|database.user|用户名|否|admin(若mongodb无认证则不填)|
+|database.password|密码|否|123456(若mongodb无认证则不填)|
 |database.database|实例|是|vnpy|
