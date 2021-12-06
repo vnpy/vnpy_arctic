@@ -25,12 +25,16 @@ class ArcticDatabase(BaseDatabase):
         """"""
         self.host: str = SETTINGS["database.host"]
         self.database: str = SETTINGS["database.database"]
+        self.username: str = SETTINGS["database.user"]
+        self.password: str = SETTINGS["database.password"]
 
         # 初始化连接
         self.connection: Arctic = Arctic(
             self.host,
             tz_aware=True,
-            tzinfo=DB_TZ
+            tzinfo=DB_TZ,
+            username=self.username,
+            password=self.password
         )
 
         # 初始化实例
