@@ -172,13 +172,14 @@ class ArcticDatabase(BaseDatabase):
     ) -> List[BarData]:
         """读取K线数据"""
         table_name = generate_table_name(symbol, exchange, interval)
-        df = self.bar_library.read(
+        df: pd.DataFrame = self.bar_library.read(
             table_name, chunk_range=DateRange(start, end))
 
         if df.empty:
             return []
 
         df.set_index("date", inplace=True)
+        df.sort_index(inplace=True)
         df = df.tz_localize(DB_TZ)
 
         bars: List[BarData] = []
@@ -211,13 +212,14 @@ class ArcticDatabase(BaseDatabase):
     ) -> List[TickData]:
         """读取Tick数据"""
         table_name = generate_table_name(symbol, exchange)
-        df = self.tick_library.read(
+        df: pd.DataFrame = self.tick_library.read(
             table_name, chunk_range=DateRange(start, end))
 
         if df.empty:
             return []
 
         df.set_index("date", inplace=True)
+        df.sort_index(inplace=True)
         df = df.tz_localize(DB_TZ)
 
         ticks: List[TickData] = []
