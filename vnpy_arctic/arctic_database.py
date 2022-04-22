@@ -50,7 +50,7 @@ class ArcticDatabase(BaseDatabase):
     def save_bar_data(self, bars: List[BarData]) -> bool:
         """保存K线数据"""
         # 转换数据为DataFrame
-        data: List[dict] = []
+        data: list = []
 
         for bar in bars:
             d: dict = {
@@ -85,7 +85,7 @@ class ArcticDatabase(BaseDatabase):
         metadata: dict = self.overview_library.read(table_name)
 
         if not metadata:
-            metadata: dict = {
+            metadata = {
                 "symbol": symbol,
                 "exchange": bar.exchange.value,
                 "interval": bar.interval.value,
@@ -109,7 +109,7 @@ class ArcticDatabase(BaseDatabase):
     def save_tick_data(self, ticks: List[TickData]) -> bool:
         """保存TICK数据"""
         # 转换数据为DataFrame
-        data: List[dict] = []
+        data: list = []
 
         for tick in ticks:
             d: dict = {
@@ -180,7 +180,7 @@ class ArcticDatabase(BaseDatabase):
 
         df.set_index("date", inplace=True)
         df.sort_index(inplace=True)
-        df: DataFrame = df.tz_localize(DB_TZ)
+        df = df.tz_localize(DB_TZ)
 
         bars: List[BarData] = []
 
@@ -220,7 +220,7 @@ class ArcticDatabase(BaseDatabase):
 
         df.set_index("date", inplace=True)
         df.sort_index(inplace=True)
-        df: DataFrame = df.tz_localize(DB_TZ)
+        df = df.tz_localize(DB_TZ)
 
         ticks: List[TickData] = []
 
