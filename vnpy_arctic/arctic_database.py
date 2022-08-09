@@ -50,7 +50,7 @@ class ArcticDatabase(BaseDatabase):
         self.bar_overview_library: MetadataStore = self.connection[f"{self.database}.bar_overview"]
         self.tick_overview_library: MetadataStore = self.connection[f"{self.database}.tick_overview"]
 
-    def save_bar_data(self, bars: List[BarData]) -> bool:
+    def save_bar_data(self, bars: List[BarData], stream: bool = True) -> bool:
         """保存K线数据"""
         # 转换数据为DataFrame
         data: List[dict] = []
@@ -96,6 +96,9 @@ class ArcticDatabase(BaseDatabase):
                 "end": bars[-1].datetime,
                 "count": count
             }
+        elif stream:
+            metadata["end"] = bars[-1].datetime
+            metadata["count"] += len(bars)
         else:
             metadata["start"] = min(metadata["start"], bars[0].datetime)
             metadata["end"] = max(metadata["end"], bars[-1].datetime)
@@ -109,7 +112,7 @@ class ArcticDatabase(BaseDatabase):
 
         return True
 
-    def save_tick_data(self, ticks: List[TickData]) -> bool:
+    def save_tick_data(self, ticks: List[TickData], stream: bool = False) -> bool:
         """保存TICK数据"""
         # 转换数据为DataFrame
         data: List[dict] = []
@@ -179,6 +182,9 @@ class ArcticDatabase(BaseDatabase):
                 "end": ticks[-1].datetime,
                 "count": count
             }
+        elif stream:
+            metadata["end"] = ticks[-1].datetime
+            metadata["count"] += len(ticks)
         else:
             metadata["start"] = min(metadata["start"], ticks[0].datetime)
             metadata["end"] = max(metadata["end"], ticks[-1].datetime)
