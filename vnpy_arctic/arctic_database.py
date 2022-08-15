@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 
-import pandas as pd
+from pandas import DataFrame
 from arctic.arctic import Arctic, CHUNK_STORE, METADATA_STORE
 from arctic.date import DateRange
 from arctic.chunkstore.chunkstore import ChunkStore
@@ -53,10 +53,10 @@ class ArcticDatabase(BaseDatabase):
     def save_bar_data(self, bars: List[BarData], stream: bool = True) -> bool:
         """保存K线数据"""
         # 转换数据为DataFrame
-        data: List[dict] = []
+        data: list = []
 
         for bar in bars:
-            d = {
+            d: dict = {
                 "date": convert_tz(bar.datetime),
                 "open_price": bar.open_price,
                 "high_price": bar.high_price,
@@ -69,12 +69,12 @@ class ArcticDatabase(BaseDatabase):
 
             data.append(d)
 
-        df: pd.DataFrame = pd.DataFrame.from_records(data)
+        df: DataFrame = DataFrame.from_records(data)
 
         # 生成数据表名
-        bar = bars[0]
-        symbol = bar.symbol
-        table_name = generate_table_name(symbol, bar.exchange, bar.interval)
+        bar: BarData = bars[0]
+        symbol: str = bar.symbol
+        table_name: str = generate_table_name(symbol, bar.exchange, bar.interval)
 
         # 将数据更新到数据库中
         self.bar_library.update(
@@ -115,10 +115,10 @@ class ArcticDatabase(BaseDatabase):
     def save_tick_data(self, ticks: List[TickData], stream: bool = False) -> bool:
         """保存TICK数据"""
         # 转换数据为DataFrame
-        data: List[dict] = []
+        data: list = []
 
         for tick in ticks:
-            d = {
+            d: dict = {
                 "date": convert_tz(tick.datetime),
                 "name": tick.name,
                 "volume": tick.volume,
@@ -156,12 +156,12 @@ class ArcticDatabase(BaseDatabase):
             }
             data.append(d)
 
-        df: pd.DataFrame = pd.DataFrame.from_records(data)
+        df: DataFrame = DataFrame.from_records(data)
 
         # 生成数据表名
-        tick = ticks[0]
-        symbol = tick.symbol
-        table_name = generate_table_name(symbol, tick.exchange)
+        tick: TickData = ticks[0]
+        symbol: str = tick.symbol
+        table_name: str = generate_table_name(symbol, tick.exchange)
 
         # 将数据更新到数据库中
         self.tick_library.update(
@@ -207,8 +207,8 @@ class ArcticDatabase(BaseDatabase):
         end: datetime
     ) -> List[BarData]:
         """读取K线数据"""
-        table_name = generate_table_name(symbol, exchange, interval)
-        df: pd.DataFrame = self.bar_library.read(
+        table_name: str = generate_table_name(symbol, exchange, interval)
+        df: DataFrame = self.bar_library.read(
             table_name, chunk_range=DateRange(start, end))
 
         if df.empty:
@@ -221,7 +221,7 @@ class ArcticDatabase(BaseDatabase):
         bars: List[BarData] = []
 
         for tp in df.itertuples():
-            bar = BarData(
+            bar: BarData = BarData(
                 symbol=symbol,
                 exchange=exchange,
                 datetime=tp.Index.to_pydatetime(),
@@ -247,8 +247,8 @@ class ArcticDatabase(BaseDatabase):
         end: datetime
     ) -> List[TickData]:
         """读取Tick数据"""
-        table_name = generate_table_name(symbol, exchange)
-        df: pd.DataFrame = self.tick_library.read(
+        table_name: str = generate_table_name(symbol, exchange)
+        df: DataFrame = self.tick_library.read(
             table_name, chunk_range=DateRange(start, end))
 
         if df.empty:
@@ -261,7 +261,7 @@ class ArcticDatabase(BaseDatabase):
         ticks: List[TickData] = []
 
         for tp in df.itertuples():
-            tick = TickData(
+            tick: TickData = TickData(
                 symbol=symbol,
                 exchange=exchange,
                 datetime=tp.Index.to_pydatetime(),
@@ -312,11 +312,11 @@ class ArcticDatabase(BaseDatabase):
     ) -> int:
         """删除K线数据"""
         # 生成表名
-        table_name = generate_table_name(symbol, exchange, interval)
+        table_name: str = generate_table_name(symbol, exchange, interval)
 
         # 查询总数据量
-        info = self.bar_library.get_info(table_name)
-        count = info["len"]
+        info: dict = self.bar_library.get_info(table_name)
+        count: int = info["len"]
 
         # 删除数据
         self.bar_library.delete(table_name)
@@ -333,11 +333,11 @@ class ArcticDatabase(BaseDatabase):
     ) -> int:
         """删除Tick数据"""
         # 生成表名
-        table_name = generate_table_name(symbol, exchange)
+        table_name: str = generate_table_name(symbol, exchange)
 
         # 查询总数据量
-        info = self.tick_library.get_info(table_name)
-        count = info["len"]
+        info: dict = self.tick_library.get_info(table_name)
+        count: int = info["len"]
 
         # 删除数据
         self.tick_library.delete(table_name)
@@ -349,13 +349,13 @@ class ArcticDatabase(BaseDatabase):
 
     def get_bar_overview(self) -> List[BarOverview]:
         """"查询数据库中的K线汇总信息"""
-        overviews = []
+        overviews: List[BarOverview] = []
 
-        table_names = self.bar_overview_library.list_symbols()
+        table_names: list = self.overview_library.list_symbols()
         for table_name in table_names:
-            metadata = self.bar_overview_library.read(table_name)
+            metadata: dict = self.overview_library.read(table_name)
 
-            overview = BarOverview(
+            overview: BarOverview = BarOverview(
                 symbol=metadata["symbol"],
                 exchange=Exchange(metadata["exchange"]),
                 interval=Interval(metadata["interval"]),
