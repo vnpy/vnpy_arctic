@@ -216,7 +216,7 @@ class ArcticDatabase(BaseDatabase):
 
         df.set_index("date", inplace=True)
         df.sort_index(inplace=True)
-        df = df.tz_localize(DB_TZ)
+        df = df.tz_localize(DB_TZ.key)
 
         bars: List[BarData] = []
 
@@ -256,7 +256,7 @@ class ArcticDatabase(BaseDatabase):
 
         df.set_index("date", inplace=True)
         df.sort_index(inplace=True)
-        df = df.tz_localize(DB_TZ)
+        df = df.tz_localize(DB_TZ.key)
 
         ticks: List[TickData] = []
 
