@@ -12,6 +12,7 @@ from vnpy.trader.object import BarData, TickData
 from vnpy.trader.database import (
     BaseDatabase,
     BarOverview,
+    TickOverview,
     DB_TZ,
     convert_tz
 )
@@ -40,14 +41,16 @@ class ArcticDatabase(BaseDatabase):
         # 初始化实例
         self.connection.initialize_library(f"{self.database}.bar_data", CHUNK_STORE)
         self.connection.initialize_library(f"{self.database}.tick_data", CHUNK_STORE)
-        self.connection.initialize_library(f"{self.database}.data_overview", METADATA_STORE)
+        self.connection.initialize_library(f"{self.database}.bar_overview", METADATA_STORE)
+        self.connection.initialize_library(f"{self.database}.tick_overview", METADATA_STORE)
 
         # 获取数据库
         self.bar_library: ChunkStore = self.connection[f"{self.database}.bar_data"]
         self.tick_library: ChunkStore = self.connection[f"{self.database}.tick_data"]
-        self.overview_library: MetadataStore = self.connection[f"{self.database}.data_overview"]
+        self.bar_overview_library: MetadataStore = self.connection[f"{self.database}.bar_overview"]
+        self.tick_overview_library: MetadataStore = self.connection[f"{self.database}.tick_overview"]
 
-    def save_bar_data(self, bars: List[BarData]) -> bool:
+    def save_bar_data(self, bars: List[BarData], stream: bool = True) -> bool:
         """保存K线数据"""
         # 转换数据为DataFrame
         data: list = []
@@ -82,7 +85,7 @@ class ArcticDatabase(BaseDatabase):
         info: dict = self.bar_library.get_info(table_name)
         count: int = info["len"]
 
-        metadata: dict = self.overview_library.read(table_name)
+        metadata: dict = self.bar_overview_library.read(table_name)
 
         if not metadata:
             metadata = {
@@ -93,12 +96,15 @@ class ArcticDatabase(BaseDatabase):
                 "end": bars[-1].datetime,
                 "count": count
             }
+        elif stream:
+            metadata["end"] = bars[-1].datetime
+            metadata["count"] += len(bars)
         else:
             metadata["start"] = min(metadata["start"], bars[0].datetime)
             metadata["end"] = max(metadata["end"], bars[-1].datetime)
             metadata["count"] = count
 
-        self.overview_library.append(
+        self.bar_overview_library.append(
             table_name,
             metadata,
             start_time=datetime.now(DB_TZ)
@@ -106,7 +112,7 @@ class ArcticDatabase(BaseDatabase):
 
         return True
 
-    def save_tick_data(self, ticks: List[TickData]) -> bool:
+    def save_tick_data(self, ticks: List[TickData], stream: bool = False) -> bool:
         """保存TICK数据"""
         # 转换数据为DataFrame
         data: list = []
@@ -161,6 +167,36 @@ class ArcticDatabase(BaseDatabase):
         self.tick_library.update(
             table_name, df, upsert=True, chunk_size="M", chunk_range=DateRange(df.date.min(), df.date.max())
         )
+
+        # 更新Tick线汇总数据
+        info: dict = self.tick_library.get_info(table_name)
+        count: int = info["len"]
+
+        metadata: dict = self.tick_overview_library.read(table_name)
+
+        if not metadata:
+            metadata = {
+                "symbol": symbol,
+                "exchange": tick.exchange.value,
+                "start": ticks[0].datetime,
+                "end": ticks[-1].datetime,
+                "count": count
+            }
+        elif stream:
+            metadata["end"] = ticks[-1].datetime
+            metadata["count"] += len(ticks)
+        else:
+            metadata["start"] = min(metadata["start"], ticks[0].datetime)
+            metadata["end"] = max(metadata["end"], ticks[-1].datetime)
+            metadata["count"] = count
+
+        self.tick_overview_library.append(
+            table_name,
+            metadata,
+            start_time=datetime.now(DB_TZ)
+        )
+
+        return True
 
     def load_bar_data(
         self,
@@ -286,7 +322,7 @@ class ArcticDatabase(BaseDatabase):
         self.bar_library.delete(table_name)
 
         # 删除K线汇总数据
-        self.overview_library.purge(table_name)
+        self.bar_overview_library.purge(table_name)
 
         return count
 
@@ -306,6 +342,9 @@ class ArcticDatabase(BaseDatabase):
         # 删除数据
         self.tick_library.delete(table_name)
 
+        # 删除Tick线汇总数据
+        self.tick_overview_library.purge(table_name)
+
         return count
 
     def get_bar_overview(self) -> List[BarOverview]:
@@ -320,6 +359,26 @@ class ArcticDatabase(BaseDatabase):
                 symbol=metadata["symbol"],
                 exchange=Exchange(metadata["exchange"]),
                 interval=Interval(metadata["interval"]),
+                start=metadata["start"],
+                end=metadata["end"],
+                count=metadata["count"]
+            )
+
+            overviews.append(overview)
+
+        return overviews
+
+    def get_tick_overview(self) -> List[TickOverview]:
+        """"查询数据库中的Tick汇总信息"""
+        overviews = []
+
+        table_names = self.tick_overview_library.list_symbols()
+        for table_name in table_names:
+            metadata = self.tick_overview_library.read(table_name)
+
+            overview = TickOverview(
+                symbol=metadata["symbol"],
+                exchange=Exchange(metadata["exchange"]),
                 start=metadata["start"],
                 end=metadata["end"],
                 count=metadata["count"]
