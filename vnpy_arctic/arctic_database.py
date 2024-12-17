@@ -23,10 +23,17 @@ class ArcticDatabase(BaseDatabase):
 
     def __init__(self) -> None:
         """"""
+        self.database_path: str = SETTINGS["database.path"]  # .vntrader 或 D:\SeaTurtle\.vntrader\ 自定义路径
         self.database_name: str = SETTINGS["database.name"]  # arcticdb
+        self.map_size: str = SETTINGS["database.map_size"]  # 5GB
+
+        if not self.database_path:
+            self.database_path = ".vntrader"
+        if not self.map_size:
+            self.map_size = "5GB"
 
         # 初始化连接
-        self.ac: Arctic = adb.Arctic("lmdb://.vntrader")
+        self.ac: Arctic = adb.Arctic(f"lmdb://{self.database_path}?map_size={self.map_size}")
 
         # 获取数据库(本地路径为.vntrader/arcticdb/bar_data/）
         self.bar_library: Library = self.ac.get_library(f"{self.database_name}.bar_data", create_if_missing=True)
@@ -61,8 +68,8 @@ class ArcticDatabase(BaseDatabase):
 
         # 将数据更新到数据库中
         self.bar_library.update(
-            table_name,
-            df, 
+            symbol=table_name,
+            data=df, 
             upsert=True,
             prune_previous_versions=True
         )
@@ -322,13 +329,15 @@ class ArcticDatabase(BaseDatabase):
         table_names: list = self.bar_library.list_symbols()
         for table_name in table_names:
             metadata: dict = self.bar_library.read_metadata(table_name).metadata
+            start: datetime = datetime.strptime(metadata["start"].rsplit(' ',1)[0], '%Y-%m-%d %H:%M:%S')
+            end: datetime = datetime.strptime(metadata["end"].rsplit(' ',1)[0], '%Y-%m-%d %H:%M:%S')
 
             overview: BarOverview = BarOverview(
                 symbol=metadata["symbol"],
                 exchange=Exchange(metadata["exchange"]),
                 interval=Interval(metadata["interval"]),
-                start=metadata["start"],
-                end=metadata["end"],
+                start=start,
+                end=end,
                 count=metadata["count"]
             )
 
@@ -343,12 +352,14 @@ class ArcticDatabase(BaseDatabase):
         table_names = self.tick_library.list_symbols()
         for table_name in table_names:
             metadata = self.tick_library.read_metadata(table_name).metadata
+            start: datetime = datetime.strptime(metadata["start"].rsplit(' ',1)[0], '%Y-%m-%d %H:%M:%S')
+            end: datetime = datetime.strptime(metadata["end"].rsplit(' ',1)[0], '%Y-%m-%d %H:%M:%S')
 
             overview = TickOverview(
                 symbol=metadata["symbol"],
                 exchange=Exchange(metadata["exchange"]),
-                start=metadata["start"],
-                end=metadata["end"],
+                start=start,
+                end=end,
                 count=metadata["count"]
             )
 
