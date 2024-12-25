@@ -23,21 +23,24 @@ class ArcticDatabase(BaseDatabase):
 
     def __init__(self) -> None:
         """"""
+        self.database_name: str = SETTINGS["database.name"]  # 必须为arctic 供trader.database.get_database()调用
         self.database_path: str = SETTINGS["database.path"]  # .vntrader 或 D:\SeaTurtle\.vntrader\ 自定义路径
-        self.database_name: str = SETTINGS["database.name"]  # arcticdb
+        self.database_database: str = SETTINGS["database.database"]  # arctic 数据库文件夹名称
         self.map_size: str = SETTINGS["database.map_size"]  # 5GB
 
         if not self.database_path:
             self.database_path = ".vntrader"
+        if not self.database_database:
+            self.database_database = "arctic"
         if not self.map_size:
             self.map_size = "5GB"
 
         # 初始化连接
         self.ac: Arctic = adb.Arctic(f"lmdb://{self.database_path}?map_size={self.map_size}")
 
-        # 获取数据库(本地路径为.vntrader/arcticdb/bar_data/）
-        self.bar_library: Library = self.ac.get_library(f"{self.database_name}.bar_data", create_if_missing=True)
-        self.tick_library: Library = self.ac.get_library(f"{self.database_name}.tick_data", create_if_missing=True)
+        # 获取数据库(本地路径为.vntrader/arctic/bar_data/）
+        self.bar_library: Library = self.ac.get_library(f"{self.database_database}.bar_data", create_if_missing=True)
+        self.tick_library: Library = self.ac.get_library(f"{self.database_database}.tick_data", create_if_missing=True)
         
     def save_bar_data(self, bars: List[BarData], stream: bool = True) -> bool:
         """保存K线数据"""
